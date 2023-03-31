@@ -92,9 +92,9 @@ type CallParams struct {
 	Stop []string `json:"stop,omitempty"`
 }
 
-// Defaults sets the default values for the CallParams. This should be called before
-// setting any values.
-func (c *CallParams) Defaults() {
+// Defaults returns a CallParams with default values set. This should be called before
+// setting any values as it will override any values that are set.
+func (c CallParams) Defaults() CallParams {
 	c.MaxTokens = defaults.MaxTokens
 	c.Temperature = defaults.Temperature
 	c.TopP = defaults.TopP
@@ -107,6 +107,7 @@ func (c *CallParams) Defaults() {
 	c.Suffix = defaults.Suffix
 	c.Echo = defaults.Echo
 	c.Stop = defaults.Stop
+	return c
 }
 
 func (c CallParams) toPromptRequest() messages.PromptRequest {

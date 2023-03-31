@@ -62,7 +62,7 @@ type PromptRequest struct {
 // Defaults sets all the default values for fields if the field is set to the zero value of the type. This will overwrite fields that have valid zero values
 // and defaults that are not the zero value. For example, Temperature has a valid value of 0 and a default of 1. Calling this would set
 // Temperature to 1 if the value was 0. It is suggested to use this before setting fields.
-func (p *PromptRequest) Defaults() {
+func (p PromptRequest) Defaults() PromptRequest {
 	// NOTE: If you change or add a value here, change it in clients/completions as well.
 	if p.MaxTokens == 0 {
 		p.MaxTokens = 16
@@ -79,9 +79,10 @@ func (p *PromptRequest) Defaults() {
 	if p.Stop == nil {
 		p.Stop = []string{`<|endoftext|>`}
 	}
+	return p
 }
 
-func (p *PromptRequest) validate() error {
+func (p PromptRequest) validate() error {
 	if len(p.Prompt) > 2048 {
 		return fmt.Errorf("cannot have a prompt list with more than 2048 entries")
 	}

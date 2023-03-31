@@ -1,5 +1,6 @@
 // Package rest provides access to the Azure OpenAI service via the REST API. This is
-// a low-level package that provides access to the REST API directly.
+// a low-level package that provides access to the REST API directly. Most normal use
+// cases will use the higher-level azopenai.Client and its sub-clients.
 package rest
 
 import (

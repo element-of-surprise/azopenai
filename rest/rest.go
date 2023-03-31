@@ -14,53 +14,22 @@ import (
 	"sync"
 	"text/template"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-
+	"github.com/element-of-surprise/azopenai/auth"
 	"github.com/element-of-surprise/azopenai/rest/messages"
 )
 
-const apiVersion = "2023-03-15-preview"
+// APIVersion represents the version of the Azure OpenAI service this client is using.
+const APIVersion = "2023-03-15-preview"
 
 // Client provides access to the Azure OpenAI service via the REST API.
 type Client struct {
 	apiVersion   string
 	resourceName string
 	deploymentID string
-	auth         Auth
+	auth         auth.Authorizer
 	client       *http.Client
 
 	completionsURL *url.URL
-}
-
-// Auth provides authorization options for authenticating to the Azure service.
-type Auth struct {
-	// AzIdentity provides authentication/authorization using the AzIdentity package.
-	AzIdentity AzIdentity
-}
-
-func (a Auth) validate() error {
-	if err := a.AzIdentity.validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// AzIdentity provides authentication/authorization using the AzIdentity package.
-type AzIdentity struct {
-	// Credential is the credential used to authenticate to the service.
-	// This can be acquired by using one of the methods in:
-	// https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity
-	Credential azcore.TokenCredential
-	// Policy provides scopes for the token request.
-	Policy policy.TokenRequestOptions
-}
-
-func (a AzIdentity) validate() error {
-	if a.Credential == nil {
-		return fmt.Errorf("missing Credential")
-	}
-	return nil
 }
 
 // Option provides optional arguments to the New constructor.
@@ -75,13 +44,13 @@ func WithClient(c *http.Client) Option {
 }
 
 // New creates a new instance of the Client type.
-func New(resourceName, deploymentID string, auth Auth, options ...Option) (*Client, error) {
-	if err := auth.validate(); err != nil {
+func New(resourceName, deploymentID string, auth auth.Authorizer, options ...Option) (*Client, error) {
+	if err := auth.Validate(); err != nil {
 		return nil, err
 	}
 
 	c := &Client{
-		apiVersion:   apiVersion,
+		apiVersion:   APIVersion,
 		resourceName: resourceName,
 		deploymentID: deploymentID,
 		auth:         auth,

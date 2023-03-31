@@ -63,6 +63,7 @@ type PromptRequest struct {
 // and defaults that are not the zero value. For example, Temperature has a valid value of 0 and a default of 1. Calling this would set
 // Temperature to 1 if the value was 0. It is suggested to use this before setting fields.
 func (p *PromptRequest) Defaults() {
+	// NOTE: If you change or add a value here, change it in clients/completions as well.
 	if p.MaxTokens == 0 {
 		p.MaxTokens = 16
 	}

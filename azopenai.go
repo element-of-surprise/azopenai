@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/element-of-surprise/azopenai/auth"
+	"github.com/element-of-surprise/azopenai/clients/chat"
 	"github.com/element-of-surprise/azopenai/clients/completions"
 	"github.com/element-of-surprise/azopenai/clients/embeddings"
 	"github.com/element-of-surprise/azopenai/rest"
@@ -69,4 +70,10 @@ func (c *Client) Completions() *completions.Client {
 // new instance of the client, not a shared instance.
 func (c *Client) Embeddings() *embeddings.Client {
 	return embeddings.New(c.rest)
+}
+
+// Chat will return a client for the Chat API. Chat provides a simple way to interact with
+// the chat API for responding as a chat bot.
+func (c *Client) Chat() *chat.Client {
+	return chat.New(c.rest)
 }

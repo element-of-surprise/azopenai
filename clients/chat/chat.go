@@ -1,4 +1,6 @@
-package completions
+// Package chat provides access to the Chat API. Chat allows you to generate text in response
+// interactive chat with a trained model.
+package chat
 
 import (
 	"context"

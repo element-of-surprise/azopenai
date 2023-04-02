@@ -21,7 +21,7 @@ import (
 	"sync/atomic"
 
 	"github.com/element-of-surprise/azopenai/rest"
-	"github.com/element-of-surprise/azopenai/rest/messages"
+	"github.com/element-of-surprise/azopenai/rest/messages/completions"
 )
 
 type Client struct {
@@ -46,6 +46,9 @@ var defaults = CallParams{
 	Stop:        []string{`<|endoftext|>`},
 }
 
+// CallParams are the parameters used on each call to the completions service. These
+// are all optional fields. You can set this on the client and override it on a per-call
+// basis.
 type CallParams struct {
 	// MaxTokens is the token count of your prompt. This cannot exceed the model's context length.
 	// Most models have a context length of 2048 tokens (except for the newest models, which support 4096). Has minimum of 0.
@@ -110,8 +113,8 @@ func (c CallParams) Defaults() CallParams {
 	return c
 }
 
-func (c CallParams) toPromptRequest() messages.PromptRequest {
-	return messages.PromptRequest{
+func (c CallParams) toPromptRequest() completions.Req {
+	return completions.Req{
 		MaxTokens:   c.MaxTokens,
 		Temperature: c.Temperature,
 		TopP:        c.TopP,
@@ -133,16 +136,17 @@ func (c *Client) SetParams(params CallParams) {
 	c.CallParams.Store(&params)
 }
 
+// Completions are the completions returned from the API.
 type Completions struct {
 	// Text is the completion texts from the server.
 	Text []string
 
 	// RestReq is the raw request sent to the REST API. This is only provided if a specific
 	// CallOption is used.
-	RestReq messages.PromptRequest
+	RestReq completions.Req
 	// RestResp is the raw response from the REST API. This is only provided if a specific
 	// CallOption is used.
-	RestResp messages.PromptResponse
+	RestResp completions.Resp
 }
 
 type callOptions struct {

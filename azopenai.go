@@ -5,6 +5,7 @@ import (
 
 	"github.com/element-of-surprise/azopenai/auth"
 	"github.com/element-of-surprise/azopenai/clients/completions"
+	"github.com/element-of-surprise/azopenai/clients/embeddings"
 	"github.com/element-of-surprise/azopenai/rest"
 )
 
@@ -56,8 +57,16 @@ func New(resourceName, deploymentID string, auth auth.Authorizer, options ...Opt
 	return c, nil
 }
 
-// Completions will return a client for the Completions API. Each call returns a
+// Completions will return a client for the Completions API. Completions attempt to return
+// sentence completions give some input text. Each call returns a
 // new instance of the client, not a shared instance.
 func (c *Client) Completions() *completions.Client {
 	return completions.New(c.rest)
+}
+
+// Embeddings will return a client for the Embeddings API. Embeddings converts text strings
+// to vector representation that can be consumed by machine learning models. Each call returns a
+// new instance of the client, not a shared instance.
+func (c *Client) Embeddings() *embeddings.Client {
+	return embeddings.New(c.rest)
 }

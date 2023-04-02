@@ -4,19 +4,20 @@
 package rest
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
-	"sync"
 	"text/template"
 
 	"github.com/element-of-surprise/azopenai/auth"
-	"github.com/element-of-surprise/azopenai/rest/messages"
+	"github.com/element-of-surprise/azopenai/rest/messages/chat"
+	"github.com/element-of-surprise/azopenai/rest/messages/completions"
+	"github.com/element-of-surprise/azopenai/rest/messages/embeddings"
 )
 
 // APIVersion represents the version of the Azure OpenAI service this client is using.
@@ -31,6 +32,8 @@ type Client struct {
 	client       *http.Client
 
 	completionsURL *url.URL
+	embeddingsURL  *url.URL
+	chatURL        *url.URL
 }
 
 // Option provides optional arguments to the New constructor.
@@ -46,7 +49,9 @@ func WithClient(c *http.Client) Option {
 
 // New creates a new instance of the Client type.
 func New(resourceName, deploymentID string, auth auth.Authorizer, options ...Option) (*Client, error) {
-	if err := auth.Validate(); err != nil {
+	var err error
+	auth, err = auth.Validate()
+	if err != nil {
 		return nil, err
 	}
 
@@ -76,87 +81,120 @@ func New(resourceName, deploymentID string, auth auth.Authorizer, options ...Opt
 // urls creates the URLs for the API endpoints based on the deployment ID. and API version. that
 // was passed.
 func (c *Client) urls() error {
-	const completions = "https://{{.resourceName}}.openai.azure.com/openai/deployments/{{.deploymentID}}/completions?api-version={{.apiVersion}}"
+	const (
+		completions = "https://{{.resourceName}}.openai.azure.com/openai/deployments/{{.deploymentID}}/completions?api-version={{.apiVersion}}"
+		embeddings  = "https://{{.resourceName}}.openai.azure.com/openai/deployments/{{.deploymentID}}/embeddings?api-version={{.apiVersion}}"
+		chat        = "https://{{.resourceName}}.openai.azure.com/openai/deployments/{{.deploymentID}}/chat/completions?api-version={{.apiVersion}}"
+	)
 
-	b := &strings.Builder{}
-	t := template.Must(template.New("completions").Parse(completions))
-	if err := t.ExecuteTemplate(b, "completions", c); err != nil {
-		return err
+	type create struct {
+		name   string
+		urlStr string
+		dest   *url.URL
 	}
 
-	var err error
-	c.completionsURL, err = url.Parse(b.String())
-	if err != nil {
-		return err
+	l := []create{
+		{"completions", completions, c.completionsURL},
+		{"embeddings", embeddings, c.embeddingsURL},
+		{"chat", chat, c.chatURL},
+	}
+
+	for _, v := range l {
+		b := &strings.Builder{}
+		t := template.Must(template.New(v.name).Parse(v.urlStr))
+		if err := t.ExecuteTemplate(b, v.name, c); err != nil {
+			return err
+		}
+
+		var err error
+		v.dest, err = url.Parse(b.String())
+		if err != nil {
+			return err
+		}
 	}
 	return nil
-}
-
-// authorize adds the authorization header to the request.
-func (c *Client) authorize(ctx context.Context, req *http.Request) error {
-	t, err := c.auth.AzIdentity.Credential.GetToken(ctx, c.auth.AzIdentity.Policy)
-	if err != nil {
-		return err
-	}
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", t))
-	return err
-}
-
-type bufferPool struct {
-	buffers chan *bytes.Buffer
-	pool    *sync.Pool
-}
-
-func newBufferPool() *bufferPool {
-	return &bufferPool{
-		buffers: make(chan *bytes.Buffer, 100),
-		pool: &sync.Pool{
-			New: func() any {
-				return &bytes.Buffer{}
-			},
-		},
-	}
-}
-
-func (b bufferPool) Get() *bytes.Buffer {
-	select {
-	case buff := <-b.buffers:
-		return buff
-	default:
-	}
-	return b.pool.Get().(*bytes.Buffer)
-}
-
-func (b bufferPool) Put(buff *bytes.Buffer) {
-	buff.Reset()
-	select {
-	case b.buffers <- buff:
-		return
-	default:
-	}
-	b.pool.Put(buff)
 }
 
 // requestsBuff is a pool of buffers used to marshal the request body.
 var requestsBuff = newBufferPool()
 
-func (c *Client) Completions(ctx context.Context, req messages.PromptRequest) (messages.PromptResponse, error) {
-	hreq, err := http.NewRequestWithContext(ctx, http.MethodPost, "", nil)
-	if err != nil {
-		return messages.PromptResponse{}, err
-	}
-	hreq.URL = c.completionsURL
-
-	if err := c.authorize(ctx, hreq); err != nil {
-		return messages.PromptResponse{}, err
-	}
-
+// Complete sends a request to the Azure OpenAI service to complete the given prompt.
+func (c *Client) Completions(ctx context.Context, req completions.Req) (completions.Resp, error) {
 	b, err := json.Marshal(req)
 	if err != nil {
-		return messages.PromptResponse{}, err
+		return completions.Resp{}, err
 	}
+	resp, err := c.send(ctx, c.completionsURL, b)
+	if err != nil {
+		return completions.Resp{}, err
+	}
+
+	var msg completions.Resp
+	if err := json.Unmarshal(resp, &msg); err != nil {
+		return completions.Resp{}, fmt.Errorf("problem unmarshaling the response body: %w", err)
+	}
+	return msg, nil
+}
+
+// Embeddings sends a request to the Azure OpenAI service to get the embeddings for the given set of data.
+func (c *Client) Embeddings(ctx context.Context, req embeddings.Req) (embeddings.Resp, error) {
+	b, err := json.Marshal(req)
+	if err != nil {
+		return embeddings.Resp{}, err
+	}
+	resp, err := c.send(ctx, c.completionsURL, b)
+	if err != nil {
+		return embeddings.Resp{}, err
+	}
+
+	var msg embeddings.Resp
+	if err := json.Unmarshal(resp, &msg); err != nil {
+		return embeddings.Resp{}, fmt.Errorf("problem unmarshaling the response body: %w", err)
+	}
+
+	sort.Slice(msg.Data, func(i, j int) bool {
+		return msg.Data[i].Index < msg.Data[j].Index
+	})
+
+	return msg, nil
+}
+
+// Chat sends a request to the Azure OpenAI service to get responses to chat messages for the given set of data.
+func (c *Client) Chat(ctx context.Context, req chat.Req) (chat.Resp, error) {
+	b, err := json.Marshal(req)
+	if err != nil {
+		return chat.Resp{}, err
+	}
+	resp, err := c.send(ctx, c.completionsURL, b)
+	if err != nil {
+		return chat.Resp{}, err
+	}
+
+	var msg chat.Resp
+	if err := json.Unmarshal(resp, &msg); err != nil {
+		return chat.Resp{}, fmt.Errorf("problem unmarshaling the response body: %w", err)
+	}
+
+	sort.Slice(msg.Choices, func(i, j int) bool {
+		return msg.Choices[i].Index < msg.Choices[j].Index
+	})
+
+	return msg, nil
+}
+
+func (c *Client) send(ctx context.Context, addr *url.URL, msg []byte) ([]byte, error) {
+	hreq, err := http.NewRequestWithContext(ctx, http.MethodPost, "", nil)
+	if err != nil {
+		return nil, err
+	}
+	hreq.URL = addr
+
+	if err := c.auth.Authorize(ctx, hreq); err != nil {
+		return nil, err
+	}
+
 	buff := requestsBuff.Get()
-	buff.Write(b)
+	buff.Write(msg)
 	hreq.Body = io.NopCloser(buff)
 	defer func() {
 		buff.Reset()
@@ -165,22 +203,18 @@ func (c *Client) Completions(ctx context.Context, req messages.PromptRequest) (m
 
 	resp, err := c.client.Do(hreq)
 	if err != nil {
-		return messages.PromptResponse{}, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return messages.PromptResponse{}, fmt.Errorf("status code %d", resp.StatusCode)
+		return nil, fmt.Errorf("status code %d", resp.StatusCode)
 	}
 
-	b, err = io.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return messages.PromptResponse{}, fmt.Errorf("problem reading the response body: %w", err)
+		return nil, fmt.Errorf("problem reading the response body: %w", err)
 	}
 
-	var res messages.PromptResponse
-	if err := json.Unmarshal(b, &res); err != nil {
-		return messages.PromptResponse{}, fmt.Errorf("problem unmarshaling the response body: %w", err)
-	}
-	return res, nil
+	return b, nil
 }

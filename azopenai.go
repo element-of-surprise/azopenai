@@ -1,3 +1,50 @@
+/*
+Package azopenai provides a client for the Azure OpenAI service.
+
+This package allows access to your OpenAI cluster using either an API key or
+using AzIdentity to authenticate with Azure Active Directory.
+
+The client is split into three sub-clients: completions, embeddings, and chat.
+Each of these sub-clients provides access to the corresponding API endpoints. You
+can access each of these sub-clients by calling the corresponding method on the main client.
+They will all share the same authentication and http.Client.
+
+Creating a Client with an API Key:
+
+	client, err := New("resourcename, "deplomentID", auth.Authorizer{ApiKey: "yourapikey"})
+	if err != nil {
+		// handle error
+	}
+
+Creating a Client with AzIdentity and default Azure credentials:
+
+	client, err := New("resourcename, "deplomentID", auth.Authorizer{AzIdentity: azidentity.NewDefaultAzureCredential()})
+	if err != nil {
+		// handle error
+	}
+
+Creating a Client with AzIdentity and a system MSI credential:
+
+	client, err := New("resourcename, "deplomentID", auth.Authorizer{AzIdentity: azidentity.NewMSICredential()})
+	if err != nil {
+		// handle error
+	}
+
+Creating a Client with AzIdentity and a user MSI credential:
+
+	client, err := New("resourcename, "deplomentID", auth.Authorizer{AzIdentity: azidentity.NewMSICredential("yourmsiid")})
+	if err != nil {
+		// handle error
+	}
+
+It should be noted that the New() method will not return an error if your credientials
+are invalid. Only after calling a method on the sub-clients will you get an error if your
+credentials or resource/deployment names are invalid.
+
+If your program needs to terminate or deal with a chat client issue early in its runtime,
+it is suggested to make a call to one of the APIs to ensure that your credentials are valid after
+creating the client.
+*/
 package azopenai
 
 import (

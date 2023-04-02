@@ -194,12 +194,10 @@ func (c *Client) send(ctx context.Context, addr *url.URL, msg []byte) ([]byte, e
 	}
 
 	buff := requestsBuff.Get()
-	buff.Write(msg)
-	hreq.Body = io.NopCloser(buff)
-	defer func() {
-		buff.Reset()
-		requestsBuff.Put(buff)
-	}()
+	defer requestsBuff.Put(buff)
+
+	buff.Reset(msg)
+	hreq.Body = buff
 
 	resp, err := c.client.Do(hreq)
 	if err != nil {

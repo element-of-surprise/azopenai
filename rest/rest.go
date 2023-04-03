@@ -4,6 +4,8 @@
 package rest
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,6 +14,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/element-of-surprise/azopenai/auth"
@@ -136,6 +139,40 @@ func (c *Client) Completions(ctx context.Context, req completions.Req) (completi
 	return msg, nil
 }
 
+// CompletionsStream is the same as Completions, except that as the service accumulates tokens to respond
+// to the request, it will stream the results back to the client. The client can stop the stream by cancelling
+// the context.
+func (c *Client) CompletionsStream(ctx context.Context, req completions.Req) chan StreamRecv[completions.Resp] {
+	ch := make(chan StreamRecv[completions.Resp], 1)
+	req.Stream = true
+	b, err := json.Marshal(req)
+	if err != nil {
+		ch <- StreamRecv[completions.Resp]{Err: err}
+		return ch
+	}
+
+	go func() {
+		defer close(ch)
+
+		responses, err := c.stream(ctx, c.completionsURL, b)
+		if err != nil {
+			ch <- StreamRecv[completions.Resp]{Err: err}
+			return
+		}
+
+		for response := range responses {
+			var msg completions.Resp
+			if err := json.Unmarshal(response.Data, &msg); err != nil {
+				ch <- StreamRecv[completions.Resp]{Err: fmt.Errorf("problem unmarshaling the response body: %w", err)}
+				return
+			}
+			ch <- StreamRecv[completions.Resp]{Data: msg}
+		}
+	}()
+
+	return ch
+}
+
 // Embeddings sends a request to the Azure OpenAI service to get the embeddings for the given set of data.
 func (c *Client) Embeddings(ctx context.Context, req embeddings.Req) (embeddings.Resp, error) {
 	b, err := json.Marshal(req)
@@ -215,4 +252,83 @@ func (c *Client) send(ctx context.Context, addr *url.URL, msg []byte) ([]byte, e
 	}
 
 	return b, nil
+}
+
+var bios = sync.Pool{
+	New: func() any {
+		return bufio.NewReader(nil)
+	},
+}
+
+var streamDone = []byte("[DONE]")
+var streamHeader = []byte("data: ")
+
+func (c *Client) stream(ctx context.Context, addr *url.URL, msg []byte) (chan StreamRecv[[]byte], error) {
+	hreq, err := http.NewRequestWithContext(ctx, http.MethodPost, "", nil)
+	if err != nil {
+		return nil, err
+	}
+	hreq.URL = addr
+
+	if err := c.auth.Authorize(ctx, hreq); err != nil {
+		return nil, err
+	}
+
+	buff := requestsBuff.Get()
+	defer requestsBuff.Put(buff)
+
+	buff.Reset(msg)
+	hreq.Body = buff
+
+	resp, err := c.client.Do(hreq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status code %d", resp.StatusCode)
+	}
+
+	ch := make(chan StreamRecv[[]byte], 1)
+	go func() {
+		defer close(ch)
+
+		bio := bios.Get().(*bufio.Reader)
+		bio.Reset(resp.Body)
+		defer bios.Put(bio)
+
+		for {
+			line, err := bio.ReadBytes('\n')
+			if err != nil {
+				ch <- StreamRecv[[]byte]{Err: err}
+				return
+			}
+			line = bytes.TrimSpace(line)
+
+			if !bytes.HasPrefix(line, streamHeader) {
+				// This indicates an empty message. We may want to put a limit on the number of empty messages.
+				// For now, we just ignore them.
+				continue
+			}
+			line = bytes.TrimPrefix(line, streamHeader)
+
+			// This indicates the end of the stream.
+			if bytes.Equal(line, streamDone) {
+				return
+			}
+
+			ch <- StreamRecv[[]byte]{Data: line}
+		}
+	}()
+
+	return ch, nil
+}
+
+// StreamRecv is used to receive data from a stream.
+type StreamRecv[T any] struct {
+	// Data is data sent by the stream.
+	Data T
+	// Err is an error related to the stream. The stream is terminated after this.
+	Err error
 }

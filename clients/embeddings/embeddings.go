@@ -1,3 +1,39 @@
+/*
+Package embeddings provides access to the Embeddings API. Embeddings allows you to generate
+vector representations of text for the purpose of model training.
+
+The simpliest way to create a Client is by using the azopenai.Client.Embeddings() method.
+
+Using this API is simple:
+
+	client := azopenai.Client.Embeddings()
+	resp, err := client.Call([]string{"Go is the best language"})
+	if err != nil {
+		// handle error
+	}
+
+You can also set the default parameters for the client:
+
+	client := azopenai.Client.Embeddings()
+
+	// This creates a new instance of CallParams with the default values.
+	// We then modify then and set them on the client. They will be used on
+	// every call unless you override them on a specific call.
+	params := embeddings.CallParams{}.Defaults()
+	params.User = "element-of-surprise"
+
+	resp, err := client.Call([]string{"Tell me a joke", "Tell me another joke"})
+	if err != nil {
+		// handle error
+	}
+
+You can also override the parameters on a per-call basis:
+
+	resp, err := client.Call([]string{"Make the world a better place"}, embeddings.WithCallParams(customParams))
+	if err != nil {
+		// handle error
+	}
+*/
 package embeddings
 
 import (

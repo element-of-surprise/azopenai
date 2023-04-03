@@ -1,5 +1,45 @@
-// Package chat provides access to the Chat API. Chat allows you to generate text in response
-// interactive chat with a trained model.
+/*
+Package chat provides access to the Chat API. Chat allows you to generate text in response
+interactive chat with a trained model.
+
+This allows you to generate text responses to messages a user sends. The simpliest
+way to create a Client is by using the azopenai.Client.Chat() method.
+
+Using this API is simple:
+
+	client := azopenai.Client.Chat()
+	resp, err := client.Call([]string{"Is Go better than Python for the use case of distributed systems?"})
+	if err != nil {
+		// handle error
+	}
+	fmt.Println(resp.Text[0])
+
+You can also set the default parameters for the client:
+
+	client := azopenai.Client.Chat()
+
+	// This creates a new instance of CallParams with the default values.
+	// We then modify then and set them on the client. They will be used on
+	// every call unless you override them on a specific call.
+	params := chat.CallParams{}.Defaults()
+	params.MaxTokens = 32
+	params.Temperature = 0.5
+	client.SetParams(params)
+
+	resp, err := client.Call([]string{"Tell me a joke"})
+	if err != nil {
+		// handle error
+	}
+
+	fmt.Println(resp.Text[0])
+
+You can also override the parameters on a per-call basis:
+
+	resp, err := client.Call([]string{"would you stop trying to find John Connor"}, chat.WithCallParams(customParams))
+	if err != nil {
+		// handle error
+	}
+*/
 package chat
 
 import (

@@ -6,12 +6,38 @@ way to create a Client is by using the azopenai.Client.Completions() method.
 
 Using this API is simple:
 
-	completions := azopenai.Client.Completions()
-	resp, err := completions.Call([]string{"The capital of Tennessee is"})
+	client := azopenai.Client.Completions()
+	resp, err := client.Call([]string{"The capital of Tennessee is"})
 	if err != nil {
 		// handle error
 	}
 	fmt.Println(resp.Completions[0].Text)
+
+You can also set the default parameters for the client:
+
+	client := azopenai.Client.Completions()
+
+	// This creates a new instance of CallParams with the default values.
+	// We then modify then and set them on the client. They will be used on
+	// every call unless you override them on a specific call.
+	params := completions.CallParams{}.Defaults()
+	params.MaxTokens = 32
+	params.Temperature = 0.5
+	client.SetParams(params)
+
+	resp, err := client.Call([]string{"The first 10 books in the Harry Potter series are"})
+	if err != nil {
+		// handle error
+	}
+
+	fmt.Println(resp.Completions[0].Text)
+
+You can also override the parameters on a per-call basis:
+
+	resp, err := client.Call([]string{"Kyoto is a city in the  "}, completions.WithCallParams(customParams))
+	if err != nil {
+		// handle error
+	}
 */
 package completions
 
@@ -27,7 +53,7 @@ import (
 type Client struct {
 	rest *rest.Client
 
-	CallParams atomic.Pointer[CallParams]
+	callParams atomic.Pointer[CallParams]
 }
 
 // New creates a new instance of the Client type from the rest.Client. This is generally
@@ -133,7 +159,7 @@ func (c CallParams) toPromptRequest() completions.Req {
 // SetParams sets the CallParams for the client. This will be used for all calls unless
 // overridden by a CallOption.
 func (c *Client) SetParams(params CallParams) {
-	c.CallParams.Store(&params)
+	c.callParams.Store(&params)
 }
 
 // Completions are the completions returned from the API.
@@ -265,7 +291,7 @@ func (c *Client) prep(prompts []string, options ...CallOption) (completions.Req,
 	}
 	if !callOptions.setCallParams {
 		callOptions.CallParams = defaults
-		p := c.CallParams.Load()
+		p := c.callParams.Load()
 		if p != nil {
 			callOptions.CallParams = *p
 		}

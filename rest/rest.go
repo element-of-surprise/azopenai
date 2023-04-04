@@ -188,7 +188,8 @@ func (c *Client) Chat(ctx context.Context, req chat.Req) (chat.Resp, error) {
 	if err != nil {
 		return chat.Resp{}, err
 	}
-	resp, err := c.send(ctx, c.completionsURL, b)
+
+	resp, err := c.send(ctx, c.chatURL, b)
 	if err != nil {
 		return chat.Resp{}, err
 	}

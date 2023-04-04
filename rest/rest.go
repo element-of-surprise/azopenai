@@ -224,6 +224,7 @@ func (c *Client) send(ctx context.Context, addr *url.URL, msg []byte) ([]byte, e
 	if err != nil {
 		return nil, err
 	}
+	hreq.Host = addr.Host
 	hreq.URL = addr
 
 	if err := c.auth.Authorize(ctx, hreq); err != nil {

@@ -165,7 +165,7 @@ func (c *Client) Embeddings(ctx context.Context, req embeddings.Req) (embeddings
 	if err != nil {
 		return embeddings.Resp{}, err
 	}
-	resp, err := c.send(ctx, c.completionsURL, b)
+	resp, err := c.send(ctx, c.embeddingsURL, b)
 	if err != nil {
 		return embeddings.Resp{}, err
 	}

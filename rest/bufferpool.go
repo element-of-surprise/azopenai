@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"bytes"
 	"io"
 	"sync"
 )
@@ -47,7 +46,7 @@ func newBufferPool() *bufferPool {
 		buffers: make(chan *Buffer, 100),
 		pool: &sync.Pool{
 			New: func() any {
-				return &bytes.Buffer{}
+				return &Buffer{}
 			},
 		},
 	}

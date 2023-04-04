@@ -243,7 +243,11 @@ func (c *Client) send(ctx context.Context, addr *url.URL, msg []byte) ([]byte, e
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status code %d", resp.StatusCode)
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("status code %d and error reading result body", resp.StatusCode)
+		}
+		return nil, fmt.Errorf("status code %d and result body %q", resp.StatusCode, string(b))
 	}
 
 	b, err := io.ReadAll(resp.Body)

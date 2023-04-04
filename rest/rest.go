@@ -13,9 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
-	"strings"
 	"sync"
-	"text/template"
 
 	"github.com/element-of-surprise/azopenai/auth"
 	"github.com/element-of-surprise/azopenai/rest/messages/chat"
@@ -85,35 +83,23 @@ func New(resourceName, deploymentID string, auth auth.Authorizer, options ...Opt
 // was passed.
 func (c *Client) urls() error {
 	const (
-		completions = "https://{{.resourceName}}.openai.azure.com/openai/deployments/{{.deploymentID}}/completions?api-version={{.apiVersion}}"
-		embeddings  = "https://{{.resourceName}}.openai.azure.com/openai/deployments/{{.deploymentID}}/embeddings?api-version={{.apiVersion}}"
-		chat        = "https://{{.resourceName}}.openai.azure.com/openai/deployments/{{.deploymentID}}/chat/completions?api-version={{.apiVersion}}"
+		completions = "https://%s.openai.azure.com/openai/deployments/%s/completions?api-version=%s"
+		embeddings  = "https://%s.openai.azure.com/openai/deployments/%s/embeddings?api-version=%s"
+		chat        = "https://%s.openai.azure.com/openai/deployments/%s/chat/completions?api-version=%s"
 	)
 
-	type create struct {
-		name   string
-		urlStr string
-		dest   *url.URL
+	var err error
+	c.completionsURL, err = url.Parse(fmt.Sprintf(completions, c.resourceName, c.deploymentID, c.apiVersion))
+	if err != nil {
+		return err
 	}
-
-	l := []create{
-		{"completions", completions, c.completionsURL},
-		{"embeddings", embeddings, c.embeddingsURL},
-		{"chat", chat, c.chatURL},
+	c.embeddingsURL, err = url.Parse(fmt.Sprintf(embeddings, c.resourceName, c.deploymentID, c.apiVersion))
+	if err != nil {
+		return err
 	}
-
-	for _, v := range l {
-		b := &strings.Builder{}
-		t := template.Must(template.New(v.name).Parse(v.urlStr))
-		if err := t.ExecuteTemplate(b, v.name, c); err != nil {
-			return err
-		}
-
-		var err error
-		v.dest, err = url.Parse(b.String())
-		if err != nil {
-			return err
-		}
+	c.chatURL, err = url.Parse(fmt.Sprintf(chat, c.resourceName, c.deploymentID, c.apiVersion))
+	if err != nil {
+		return err
 	}
 	return nil
 }

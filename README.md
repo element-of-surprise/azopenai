@@ -50,29 +50,23 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	apiKey := os.Getenv("API_KEY")
 	resourceName := os.Getenv("RESOURCE_ID")
 	deploymentID := os.Getenv("DEPLOYMENT_ID")
 
-	if err := Completions(apiKey, resourceName, deploymentID); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func Completions(apiKey, resourceName, deploymentID string) error {
 	client, err := azopenai.New(resourceName, deploymentID, auth.Authorizer{ApiKey: apiKey})
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 
-	ctx := context.Background()
 	completions := client.Completions()
+
 	resp, err := completions.Call(ctx, []string{"The capital of California is"})
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 	fmt.Println(resp.Text[0])
-	return nil
 }
 ```
 

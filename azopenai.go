@@ -1,49 +1,52 @@
 /*
-Package azopenai provides a client for the Azure OpenAI service.
+Package azopenai provides a client for the Azure OpenAI Service.
 
-This package allows access to your OpenAI cluster using either an API key or
-using AzIdentity to authenticate with Azure Active Directory.
+This package allows access to Azure OpenAI Service using either an API key or
+using [AzIdentity] to authenticate with Azure Active Directory.
 
-The client is split into three sub-clients: completions, embeddings, and chat.
+The client is split into three sub-clients: completions, chat, and embeddings.
 Each of these sub-clients provides access to the corresponding API endpoints. You
 can access each of these sub-clients by calling the corresponding method on the main client.
 They will all share the same authentication and http.Client.
 
 Creating a Client with an API Key:
 
-	client, err := New("resourceName, "deploymentID", auth.Authorizer{ApiKey: "yourAPIkey"})
+	client, err := azopenai.New(resourceName, deploymentName, auth.Authorizer{ApiKey: apiKey})
 	if err != nil {
-		// handle error
+		return err
 	}
 
 Creating a Client with AzIdentity and default Azure credentials:
 
-	client, err := New("resourceName, "deploymentID", auth.Authorizer{AzIdentity: azidentity.NewDefaultAzureCredential()})
+	client, err := New(resourceName, deploymentID, auth.Authorizer{AzIdentity: azidentity.NewDefaultAzureCredential()})
 	if err != nil {
-		// handle error
+		return err
 	}
 
-Creating a Client with AzIdentity and a system MSI credential:
+Creating a Client with AzIdentity and a system [Managed Identity for Azure Resources] credential:
 
-	client, err := New("resourceName, "deploymentID", auth.Authorizer{AzIdentity: azidentity.NewMSICredential()})
+	client, err := New(resourceName, deploymentID, auth.Authorizer{AzIdentity: azidentity.NewMSICredential()})
 	if err != nil {
-		// handle error
+		return err
 	}
 
-Creating a Client with AzIdentity and a user MSI credential:
+Creating a Client with AzIdentity and a user [Managed Identity for Azure Resources] credential:
 
-	client, err := New("resourceName, "deploymentID", auth.Authorizer{AzIdentity: azidentity.NewMSICredential("yourmsiid")})
+	client, err := New(resourceName, deploymentID, auth.Authorizer{AzIdentity: azidentity.NewMSICredential("yourmsiid")})
 	if err != nil {
-		// handle error
+		return err
 	}
 
-It should be noted that the New() method will not return an error if your credientials
+It should be noted that the New() method will not return an error if your credentials
 are invalid. Only after calling a method on the sub-clients will you get an error if your
 credentials or resource/deployment names are invalid.
 
 If your program needs to terminate or deal with a chat client issue early in its runtime,
 it is suggested to make a call to one of the APIs to ensure that your credentials are valid after
 creating the client.
+
+[AzIdentity]: https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/azidentity/README.md
+[Managed Identity for Azure Resources]: https://learn.microsoft.com/azure/active-directory/managed-identities-azure-resources/overview
 */
 package azopenai
 
@@ -57,7 +60,7 @@ import (
 	"github.com/element-of-surprise/azopenai/rest"
 )
 
-// Client provides access to the Azure OpenAI service.
+// Client provides access to the Azure OpenAI Service.
 type Client struct {
 	resourceName string
 	deploymentID string

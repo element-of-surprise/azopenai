@@ -32,7 +32,9 @@ go get github.com/element-of-surprise/azopenai
 
 ## Usage
 
-Here is an example of how to use AzOpenAI to generate text using the OpenAI completions API endpoint.
+Here is an example of how to use AzOpenAI to generate text using the OpenAI completions API endpoint. 
+
+See [samples/main.go](samples/main.go) for full Completions, Chat and Embeddings samples.
 
 ```go
 package main
@@ -48,16 +50,17 @@ import (
 )
 
 func main() {
-	if err := run(); err != nil {
+	apiKey := os.Getenv("API_KEY")
+	resourceName := os.Getenv("RESOURCE_ID")
+	deploymentID := os.Getenv("DEPLOYMENT_ID")
+
+	if err := Completions(apiKey, resourceName, deploymentID); err != nil {
 		log.Fatal(err)
 	}
 }
-func run() error {
-	apiKey := os.Getenv("API_KEY")
-	resourceName := os.Getenv("RESOURCE_NAME")
-	deploymentName := os.Getenv("DEPLOYMENT_NAME")
 
-	client, err := azopenai.New(resourceName, deploymentName, auth.Authorizer{ApiKey: apiKey})
+func Completions(apiKey, resourceName, deploymentID string) error {
+	client, err := azopenai.New(resourceName, deploymentID, auth.Authorizer{ApiKey: apiKey})
 	if err != nil {
 		return err
 	}

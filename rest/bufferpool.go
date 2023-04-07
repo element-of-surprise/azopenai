@@ -5,16 +5,16 @@ import (
 	"sync"
 )
 
-// Buffer is a buffer object that implements the io.ReadCloser interface.
-// It is more efficient than bytes.Buffer for our purposes, as we don't need
+// buffer is a buffer object that implements the io.ReadCloser interface.
+// It is more efficient than bytes.buffer for our purposes, as we don't need
 // to write to the buffer after it has been created.
-type Buffer struct {
+type buffer struct {
 	b   []byte
 	ptr int
 }
 
 // Read implements the io.Reader interface.
-func (b *Buffer) Read(p []byte) (n int, err error) {
+func (b *buffer) Read(p []byte) (n int, err error) {
 	if b.ptr >= len(b.b) {
 		return 0, io.EOF
 	}
@@ -24,44 +24,44 @@ func (b *Buffer) Read(p []byte) (n int, err error) {
 }
 
 // Close implements the io.Closer interface.
-func (b *Buffer) Close() error {
+func (b *buffer) Close() error {
 	b.b = nil
 	b.ptr = 0
 	return nil
 }
 
 // Reset resets the buffer to the given byte slice.
-func (b *Buffer) Reset(buff []byte) {
+func (b *buffer) Reset(buff []byte) {
 	b.b = buff
 	b.ptr = 0
 }
 
 type bufferPool struct {
-	buffers chan *Buffer
+	buffers chan *buffer
 	pool    *sync.Pool
 }
 
 func newBufferPool() *bufferPool {
 	return &bufferPool{
-		buffers: make(chan *Buffer, 100),
+		buffers: make(chan *buffer, 100),
 		pool: &sync.Pool{
 			New: func() any {
-				return &Buffer{}
+				return &buffer{}
 			},
 		},
 	}
 }
 
-func (b bufferPool) Get() *Buffer {
+func (b bufferPool) Get() *buffer {
 	select {
 	case buff := <-b.buffers:
 		return buff
 	default:
 	}
-	return b.pool.Get().(*Buffer)
+	return b.pool.Get().(*buffer)
 }
 
-func (b bufferPool) Put(buff *Buffer) {
+func (b bufferPool) Put(buff *buffer) {
 	select {
 	case b.buffers <- buff:
 		return

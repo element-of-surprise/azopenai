@@ -26,13 +26,18 @@ import (
 // APIVersion represents the version of the Azure OpenAI service this client is using.
 const APIVersion = "2023-03-15-preview"
 
+type templVars struct {
+	ResourceName string
+	DeploymentID string
+	APIVersion   string
+}
+
 // Client provides access to the Azure OpenAI service via the REST API.
 type Client struct {
-	apiVersion   string
-	resourceName string
-	deploymentID string
-	auth         auth.Authorizer
-	client       *http.Client
+	auth   auth.Authorizer
+	client *http.Client
+
+	vars templVars
 
 	completionsURL *url.URL
 	embeddingsURL  *url.URL
@@ -59,10 +64,12 @@ func New(resourceName, deploymentID string, auth auth.Authorizer, options ...Opt
 	}
 
 	c := &Client{
-		apiVersion:   APIVersion,
-		resourceName: resourceName,
-		deploymentID: deploymentID,
-		auth:         auth,
+		vars: templVars{
+			ResourceName: resourceName,
+			DeploymentID: deploymentID,
+			APIVersion:   APIVersion,
+		},
+		auth: auth,
 	}
 	for _, o := range options {
 		if err := o(c); err != nil {
@@ -85,32 +92,32 @@ func New(resourceName, deploymentID string, auth auth.Authorizer, options ...Opt
 // was passed.
 func (c *Client) urls() error {
 	const (
-		completions = "https://{{.resourceName}}.openai.azure.com/openai/deployments/{{.deploymentID}}/completions?api-version={{.apiVersion}}"
-		embeddings  = "https://{{.resourceName}}.openai.azure.com/openai/deployments/{{.deploymentID}}/embeddings?api-version={{.apiVersion}}"
-		chat        = "https://{{.resourceName}}.openai.azure.com/openai/deployments/{{.deploymentID}}/chat/completions?api-version={{.apiVersion}}"
+		completions = "https://{{.ResourceName}}.openai.azure.com/openai/deployments/{{.DeploymentID}}/completions?api-version={{.APIVersion}}"
+		embeddings  = "https://{{.ResourceName}}.openai.azure.com/openai/deployments/{{.DeploymentID}}/embeddings?api-version={{.APIVersion}}"
+		chat        = "https://{{.ResourceName}}.openai.azure.com/openai/deployments/{{.DeploymentID}}/chat?api-version={{.APIVersion}}"
 	)
 
 	type create struct {
 		name   string
 		urlStr string
-		dest   *url.URL
+		dest   **url.URL
 	}
 
 	l := []create{
-		{"completions", completions, c.completionsURL},
-		{"embeddings", embeddings, c.embeddingsURL},
-		{"chat", chat, c.chatURL},
+		{"completions", completions, &c.completionsURL},
+		{"embeddings", embeddings, &c.embeddingsURL},
+		{"chat", chat, &c.chatURL},
 	}
 
 	for _, v := range l {
 		b := &strings.Builder{}
 		t := template.Must(template.New(v.name).Parse(v.urlStr))
-		if err := t.ExecuteTemplate(b, v.name, c); err != nil {
+		if err := t.ExecuteTemplate(b, v.name, c.vars); err != nil {
 			return err
 		}
 
 		var err error
-		v.dest, err = url.Parse(b.String())
+		*v.dest, err = url.Parse(b.String())
 		if err != nil {
 			return err
 		}
@@ -259,7 +266,7 @@ func (c *Client) send(ctx context.Context, addr *url.URL, msg []byte) ([]byte, e
 	return b, nil
 }
 
-var bios = sync.Pool{
+var bufIOs = sync.Pool{
 	New: func() any {
 		return bufio.NewReader(nil)
 	},
@@ -299,9 +306,9 @@ func (c *Client) stream(ctx context.Context, addr *url.URL, msg []byte) (chan St
 	go func() {
 		defer close(ch)
 
-		bio := bios.Get().(*bufio.Reader)
+		bio := bufIOs.Get().(*bufio.Reader)
 		bio.Reset(resp.Body)
-		defer bios.Put(bio)
+		defer bufIOs.Put(bio)
 
 		for {
 			line, err := bio.ReadBytes('\n')

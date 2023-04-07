@@ -20,7 +20,8 @@ AzOpenAI is a Golang SDK for interfacing with an Azure hosted OpenAI cluster. It
 
 ## Installation
 
-To use AzOpenAI in your Go project, you can simply add the following import statement:go
+To use AzOpenAI in your Go project, you can simply add the following import statement:
+
 ```go
 import "github.com/element-of-surprise/azopenai"
 ```
@@ -33,7 +34,8 @@ go get github.com/element-of-surprise/azopenai
 
 ## Usage
 
-Here is an example of how to use AzOpenAI to generate text using the OpenAI completions API endpoint:go
+Here is an example of how to use AzOpenAI to generate text using the OpenAI completions API endpoint:
+
 ```go
 package main
 

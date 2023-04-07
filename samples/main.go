@@ -14,17 +14,13 @@ import (
 )
 
 func main() {
-	if err := run(); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func run() error {
 	apiKey := os.Getenv("API_KEY")
 	resourceName := os.Getenv("RESOURCE_NAME")
 	deploymentID := os.Getenv("DEPLOYMENT_ID")
 
-	return Chat(apiKey, resourceName, deploymentID)
+	if err := Chat(apiKey, resourceName, deploymentID); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func Chat(apiKey, resourceName, deploymentID string) error {

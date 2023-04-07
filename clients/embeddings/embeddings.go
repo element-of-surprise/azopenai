@@ -79,7 +79,7 @@ type CallParams struct {
 	User string `json:"user,omitempty"`
 	// Type is the embedding search to use. This is optional.
 	Type string `json:"input_type,omitempty"`
-	// Model is the mdoel ID to use. This is optional.
+	// Model is the model ID to use. This is optional.
 	Model string `json:"model,omitempty"`
 }
 

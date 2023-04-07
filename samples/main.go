@@ -32,16 +32,15 @@ func Chat(apiKey, resourceName, deploymentID string) error {
 	chatClient := client.Chat()
 	messages := []chat.SendMsg{
 		{
-			Role:    "system",
+			Role:    chat.System,
 			Content: "You are a helpful assistant.",
 		},
 		{
-			Role:    "user",
+			Role:    chat.User,
 			Content: "Does Azure OpenAI support customer managed keys?",
 		},
 	}
-	ctx := context.Background()
-	resp, err := chatClient.Call(ctx, messages)
+	resp, err := chatClient.Call(context.Background(), messages)
 	if err != nil {
 		return err
 	}
@@ -65,9 +64,8 @@ func ChatWithParams(apiKey, resourceName, deploymentID string) error {
 	params.Temperature = 0.5
 	chatClient.SetParams(params)
 
-	messages := []chat.SendMsg{{Role: "user", Content: "Tell me a joke"}}
-	ctx := context.Background()
-	resp, err := chatClient.Call(ctx, messages)
+	messages := []chat.SendMsg{{Role: chat.User, Content: "Tell me a joke"}}
+	resp, err := chatClient.Call(context.Background(), messages)
 	if err != nil {
 		return err
 	}
@@ -91,8 +89,7 @@ func ChatWithParamsPerCall(apiKey, resourceName, deploymentID string) error {
 	params.Temperature = 0.5
 
 	messages := []chat.SendMsg{{Role: "user", Content: "Tell me a joke"}}
-	ctx := context.Background()
-	resp, err := chatClient.Call(ctx, messages, chat.WithCallParams(params))
+	resp, err := chatClient.Call(context.Background(), messages, chat.WithCallParams(params))
 	if err != nil {
 		return err
 	}
@@ -107,9 +104,8 @@ func Completions(apiKey, resourceName, deploymentID string) error {
 		return err
 	}
 
-	ctx := context.Background()
 	completions := client.Completions()
-	resp, err := completions.Call(ctx, []string{"The capital of California is"})
+	resp, err := completions.Call(context.Background(), []string{"The capital of California is"})
 	if err != nil {
 		return err
 	}
@@ -134,8 +130,7 @@ func CompletionsWithParams(apiKey, resourceName, deploymentID string) error {
 	params.Temperature = 0.5
 	completionsClient.SetParams(params)
 
-	ctx := context.Background()
-	resp, err := completionsClient.Call(ctx, []string{"The capital of California is"})
+	resp, err := completionsClient.Call(context.Background(), []string{"The capital of California is"})
 	if err != nil {
 		return err
 	}
@@ -159,8 +154,7 @@ func CompletionsWithParamsPerCall(apiKey, resourceName, deploymentID string) err
 	params.MaxTokens = 32
 	params.Temperature = 0.5
 
-	ctx := context.Background()
-	resp, err := completionsClient.Call(ctx, []string{"The capital of California is"}, completions.WithCallParams(params))
+	resp, err := completionsClient.Call(context.Background(), []string{"The capital of California is"}, completions.WithCallParams(params))
 	if err != nil {
 		return err
 	}
@@ -176,9 +170,8 @@ func Embeddings(apiKey, resourceName, deploymentID string) error {
 	}
 
 	embeddingsClient := client.Embeddings()
-	ctx := context.Background()
 	text := []string{"The food was delicious and the waiter..."}
-	resp, err := embeddingsClient.Call(ctx, text)
+	resp, err := embeddingsClient.Call(context.Background(), text)
 	if err != nil {
 		return err
 	}
@@ -201,9 +194,8 @@ func EmbeddingsWithParams(apiKey, resourceName, deploymentID string) error {
 	params.User = "element-of-surprise"
 	embeddingsClient.SetParams(params)
 
-	ctx := context.Background()
 	text := []string{"The food was delicious and the waiter..."}
-	resp, err := embeddingsClient.Call(ctx, text)
+	resp, err := embeddingsClient.Call(context.Background(), text)
 	if err != nil {
 		return err
 	}
@@ -225,9 +217,8 @@ func EmbeddingsWithParamsPerCall(apiKey, resourceName, deploymentID string) erro
 	params := embeddings.CallParams{}
 	params.User = "element-of-surprise"
 
-	ctx := context.Background()
 	text := []string{"The food was delicious and the waiter..."}
-	resp, err := embeddingsClient.Call(ctx, text, embeddings.WithCallParams(params))
+	resp, err := embeddingsClient.Call(context.Background(), text, embeddings.WithCallParams(params))
 	if err != nil {
 		return err
 	}

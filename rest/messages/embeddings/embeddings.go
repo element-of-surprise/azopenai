@@ -7,7 +7,7 @@ import "errors"
 type Req struct {
 	// Type is the embedding search to use. This is optional.
 	Type string `json:"input_type,omitempty"`
-	// Model is the mdoel ID to use. This is optional.
+	// Model is the model ID to use. This is optional.
 	Model string `json:"model,omitempty"`
 	// Input is text to get embeddings for. Must not exceed 2048 tokens (2048 entries).
 	// Unless you are embedding code, we suggest replacing newlines (\\n) in your input with a single space,

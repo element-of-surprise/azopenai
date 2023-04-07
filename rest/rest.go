@@ -186,7 +186,7 @@ func (c *Client) Embeddings(ctx context.Context, req embeddings.Req) (embeddings
 	if err != nil {
 		return embeddings.Resp{}, err
 	}
-	resp, err := c.send(ctx, c.completionsURL, b)
+	resp, err := c.send(ctx, c.embeddingsURL, b)
 	if err != nil {
 		return embeddings.Resp{}, err
 	}
@@ -209,7 +209,7 @@ func (c *Client) Chat(ctx context.Context, req chat.Req) (chat.Resp, error) {
 	if err != nil {
 		return chat.Resp{}, err
 	}
-	resp, err := c.send(ctx, c.completionsURL, b)
+	resp, err := c.send(ctx, c.chatURL, b)
 	if err != nil {
 		return chat.Resp{}, err
 	}

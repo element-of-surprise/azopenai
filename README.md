@@ -1,6 +1,9 @@
-<a href="https://github.com/element-of-surprise/azopenai"><img src="https://raw.githubusercontent.com/element-of-surprise/azopenai/main/logo.svg?sanitize=true" alt="Azure OpenAI" width="565"></a> 
-
-# AzOpenAI Go SDK
+<p align="center">
+<a href="https://github.com/element-of-surprise/azopenai"><img src="https://raw.githubusercontent.com/element-of-surprise/azopenai/main/logo.svg?sanitize=true" alt="Azure OpenAI" width="100"></a>
+</p> 
+<p align="center">
+<font size="6">AzOpenAI Go SDK </font>
+</p> 
 
 [![GoDev](https://img.shields.io/static/v1?label=godev&message=reference&color=00add8)](https://pkg.go.dev/github.com/element-of-surprise/azopenai)
 [![Go Report Card](https://goreportcard.com/badge/github.com/element-of-surprise/azopenai)](https://goreportcard.com/report/github.com/element-of-surprise/azopenai)

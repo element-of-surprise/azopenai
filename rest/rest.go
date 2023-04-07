@@ -94,7 +94,7 @@ func (c *Client) urls() error {
 	const (
 		completions = "https://{{.ResourceName}}.openai.azure.com/openai/deployments/{{.DeploymentID}}/completions?api-version={{.APIVersion}}"
 		embeddings  = "https://{{.ResourceName}}.openai.azure.com/openai/deployments/{{.DeploymentID}}/embeddings?api-version={{.APIVersion}}"
-		chat        = "https://{{.ResourceName}}.openai.azure.com/openai/deployments/{{.DeploymentID}}/chat?api-version={{.APIVersion}}"
+		chat        = "https://{{.ResourceName}}.openai.azure.com/openai/deployments/{{.DeploymentID}}/chat/completions?api-version={{.APIVersion}}"
 	)
 
 	type create struct {

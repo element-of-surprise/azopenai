@@ -25,7 +25,7 @@ func TestURLs(t *testing.T) {
 		t.Fatalf("unexpected embeddings url: %s", c.embeddingsURL.String())
 	}
 
-	if c.chatURL.String() != "https://test.openai.azure.com/openai/deployments/test/chat?api-version="+APIVersion {
+	if c.chatURL.String() != "https://test.openai.azure.com/openai/deployments/test/chat/completions?api-version="+APIVersion {
 		t.Fatalf("unexpected chat url: %s", c.chatURL.String())
 	}
 }

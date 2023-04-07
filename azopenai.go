@@ -11,28 +11,28 @@ They will all share the same authentication and http.Client.
 
 Creating a Client with an API Key:
 
-	client, err := New("resourcename, "deplomentID", auth.Authorizer{ApiKey: "yourapikey"})
+	client, err := New("resourceName, "deploymentID", auth.Authorizer{ApiKey: "yourAPIkey"})
 	if err != nil {
 		// handle error
 	}
 
 Creating a Client with AzIdentity and default Azure credentials:
 
-	client, err := New("resourcename, "deplomentID", auth.Authorizer{AzIdentity: azidentity.NewDefaultAzureCredential()})
+	client, err := New("resourceName, "deploymentID", auth.Authorizer{AzIdentity: azidentity.NewDefaultAzureCredential()})
 	if err != nil {
 		// handle error
 	}
 
 Creating a Client with AzIdentity and a system MSI credential:
 
-	client, err := New("resourcename, "deplomentID", auth.Authorizer{AzIdentity: azidentity.NewMSICredential()})
+	client, err := New("resourceName, "deploymentID", auth.Authorizer{AzIdentity: azidentity.NewMSICredential()})
 	if err != nil {
 		// handle error
 	}
 
 Creating a Client with AzIdentity and a user MSI credential:
 
-	client, err := New("resourcename, "deplomentID", auth.Authorizer{AzIdentity: azidentity.NewMSICredential("yourmsiid")})
+	client, err := New("resourceName, "deploymentID", auth.Authorizer{AzIdentity: azidentity.NewMSICredential("yourmsiid")})
 	if err != nil {
 		// handle error
 	}

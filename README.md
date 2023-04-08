@@ -55,12 +55,12 @@ func main() {
 	resourceName := os.Getenv("RESOURCE_ID")
 	deploymentID := os.Getenv("DEPLOYMENT_ID")
 
-	client, err := azopenai.New(resourceName, deploymentID, auth.Authorizer{ApiKey: apiKey})
+	client, err := azopenai.New(resourceName, auth.Authorizer{ApiKey: apiKey})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	completions := client.Completions()
+	completions := client.Completions(deploymentID)
 
 	resp, err := completions.Call(ctx, []string{"The capital of California is"})
 	if err != nil {
@@ -72,7 +72,7 @@ func main() {
 
 In this example, `azopenai.New()` is used to create a new AzOpenAI client with your Azure OpenAI Service [API Key](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/reference#authentication). 
 
-Then the returned client aggregator `client` has `client.Completions()` called to get a client for the completions endpoint.
+Then the returned client aggregator `client` has `client.Completions()` called to get a client for the completions endpoint. You pass the `deploymentID` here so that you can point at the right model for the sub-client. Deployments only have support for some API calls.
 
 Next, `completions.Call()` is invoked on the client with the prompt(s) and any additional options specified. 
 

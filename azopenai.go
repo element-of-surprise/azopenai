@@ -11,28 +11,28 @@ They will all share the same authentication and http.Client.
 
 Creating a Client with an API Key:
 
-	client, err := azopenai.New(resourceName, deploymentName, auth.Authorizer{ApiKey: apiKey})
+	client, err := azopenai.New(resourceName, auth.Authorizer{ApiKey: apiKey})
 	if err != nil {
 		return err
 	}
 
 Creating a Client with AzIdentity and default Azure credentials:
 
-	client, err := New(resourceName, deploymentID, auth.Authorizer{AzIdentity: azidentity.NewDefaultAzureCredential()})
+	client, err := New(resourceName, auth.Authorizer{AzIdentity: azidentity.NewDefaultAzureCredential()})
 	if err != nil {
 		return err
 	}
 
 Creating a Client with AzIdentity and a system [Managed Identity for Azure Resources] credential:
 
-	client, err := New(resourceName, deploymentID, auth.Authorizer{AzIdentity: azidentity.NewMSICredential()})
+	client, err := New(resourceName, auth.Authorizer{AzIdentity: azidentity.NewMSICredential()})
 	if err != nil {
 		return err
 	}
 
 Creating a Client with AzIdentity and a user [Managed Identity for Azure Resources] credential:
 
-	client, err := New(resourceName, deploymentID, auth.Authorizer{AzIdentity: azidentity.NewMSICredential("yourmsiid")})
+	client, err := New(resourceName, auth.Authorizer{AzIdentity: azidentity.NewMSICredential("yourmsiid")})
 	if err != nil {
 		return err
 	}
@@ -82,10 +82,9 @@ func WithClient(c *http.Client) Option {
 }
 
 // New creates a new instance of the Client.
-func New(resourceName, deploymentID string, auth auth.Authorizer, options ...Option) (*Client, error) {
+func New(resourceName string, auth auth.Authorizer, options ...Option) (*Client, error) {
 	c := &Client{
 		resourceName: resourceName,
-		deploymentID: deploymentID,
 		auth:         auth,
 	}
 
@@ -99,7 +98,7 @@ func New(resourceName, deploymentID string, auth auth.Authorizer, options ...Opt
 		c.client = &http.Client{}
 	}
 
-	r, err := rest.New(resourceName, deploymentID, auth, rest.WithClient(c.client))
+	r, err := rest.New(resourceName, auth, rest.WithClient(c.client))
 	if err != nil {
 		return nil, err
 	}
@@ -111,19 +110,19 @@ func New(resourceName, deploymentID string, auth auth.Authorizer, options ...Opt
 // Completions will return a client for the Completions API. Completions attempt to return
 // sentence completions give some input text. Each call returns a
 // new instance of the client, not a shared instance.
-func (c *Client) Completions() *completions.Client {
-	return completions.New(c.rest)
+func (c *Client) Completions(deploymentID string) *completions.Client {
+	return completions.New(deploymentID, c.rest)
 }
 
 // Embeddings will return a client for the Embeddings API. Embeddings converts text strings
 // to vector representation that can be consumed by machine learning models. Each call returns a
 // new instance of the client, not a shared instance.
-func (c *Client) Embeddings() *embeddings.Client {
-	return embeddings.New(c.rest)
+func (c *Client) Embeddings(deploymentID string) *embeddings.Client {
+	return embeddings.New(deploymentID, c.rest)
 }
 
 // Chat will return a client for the Chat API. Chat provides a simple way to interact with
 // the chat API for responding as a chat bot.
-func (c *Client) Chat() *chat.Client {
-	return chat.New(c.rest)
+func (c *Client) Chat(deploymentID string) *chat.Client {
+	return chat.New(deploymentID, c.rest)
 }

@@ -32,6 +32,73 @@ type templVars struct {
 	APIVersion   string
 }
 
+type deployments map[string]*url.URL
+
+type endpoints struct {
+	temps *template.Template
+	mu    sync.Mutex // Protects m
+	m     map[endpointType]deployments
+}
+
+type endpointType string
+
+const (
+	unknownTmpl     endpointType = ""
+	completionsTmpl endpointType = "completions"
+	embeddingsTmpl  endpointType = "embeddings"
+	chatTmpl        endpointType = "chat"
+)
+
+func newEndpoints() *endpoints {
+	const (
+		completions = "https://{{.ResourceName}}.openai.azure.com/openai/deployments/{{.DeploymentID}}/completions?api-version={{.APIVersion}}"
+		embeddings  = "https://{{.ResourceName}}.openai.azure.com/openai/deployments/{{.DeploymentID}}/embeddings?api-version={{.APIVersion}}"
+		chat        = "https://{{.ResourceName}}.openai.azure.com/openai/deployments/{{.DeploymentID}}/chat/completions?api-version={{.APIVersion}}"
+	)
+
+	temps := &template.Template{}
+	temps = template.Must(temps.New(string(completionsTmpl)).Parse(completions))
+	temps = template.Must(temps.New(string(embeddingsTmpl)).Parse(embeddings))
+	temps = template.Must(temps.New(string(chatTmpl)).Parse(chat))
+
+	return &endpoints{
+		temps: temps,
+		m:     make(map[endpointType]deployments),
+	}
+}
+
+func (e *endpoints) url(eType endpointType, deploymentID string, vars templVars) (*url.URL, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	deploy := e.m[eType]
+	if deploy == nil {
+		deploy = deployments{}
+		e.m[eType] = deploy
+	}
+
+	u := deploy[deploymentID]
+	if u == nil {
+		vars.DeploymentID = deploymentID
+		u, err := e.set(eType, vars)
+		if err != nil {
+			return nil, err
+		}
+		e.m[eType][deploymentID] = u
+		return u, nil
+	}
+	return u, nil
+}
+
+func (e *endpoints) set(et endpointType, vars templVars) (*url.URL, error) {
+	b := &strings.Builder{}
+	if err := e.temps.ExecuteTemplate(b, string(et), vars); err != nil {
+		return nil, err
+	}
+
+	return url.Parse(b.String())
+}
+
 // Client provides access to the Azure OpenAI service via the REST API.
 type Client struct {
 	auth   auth.Authorizer
@@ -42,6 +109,8 @@ type Client struct {
 	completionsURL *url.URL
 	embeddingsURL  *url.URL
 	chatURL        *url.URL
+
+	endpoints *endpoints
 }
 
 // Option provides optional arguments to the New constructor.
@@ -56,7 +125,7 @@ func WithClient(c *http.Client) Option {
 }
 
 // New creates a new instance of the Client type.
-func New(resourceName, deploymentID string, auth auth.Authorizer, options ...Option) (*Client, error) {
+func New(resourceName string, auth auth.Authorizer, options ...Option) (*Client, error) {
 	var err error
 	auth, err = auth.Validate()
 	if err != nil {
@@ -66,10 +135,10 @@ func New(resourceName, deploymentID string, auth auth.Authorizer, options ...Opt
 	c := &Client{
 		vars: templVars{
 			ResourceName: resourceName,
-			DeploymentID: deploymentID,
 			APIVersion:   APIVersion,
 		},
-		auth: auth,
+		endpoints: newEndpoints(),
+		auth:      auth,
 	}
 	for _, o := range options {
 		if err := o(c); err != nil {
@@ -81,60 +150,24 @@ func New(resourceName, deploymentID string, auth auth.Authorizer, options ...Opt
 		c.client = &http.Client{}
 	}
 
-	if err := c.urls(); err != nil {
-		return nil, err
-	}
-
 	return c, nil
-}
-
-// urls creates the URLs for the API endpoints based on the deployment ID. and API version. that
-// was passed.
-func (c *Client) urls() error {
-	const (
-		completions = "https://{{.ResourceName}}.openai.azure.com/openai/deployments/{{.DeploymentID}}/completions?api-version={{.APIVersion}}"
-		embeddings  = "https://{{.ResourceName}}.openai.azure.com/openai/deployments/{{.DeploymentID}}/embeddings?api-version={{.APIVersion}}"
-		chat        = "https://{{.ResourceName}}.openai.azure.com/openai/deployments/{{.DeploymentID}}/chat/completions?api-version={{.APIVersion}}"
-	)
-
-	type create struct {
-		name   string
-		urlStr string
-		dest   **url.URL
-	}
-
-	l := []create{
-		{"completions", completions, &c.completionsURL},
-		{"embeddings", embeddings, &c.embeddingsURL},
-		{"chat", chat, &c.chatURL},
-	}
-
-	for _, v := range l {
-		b := &strings.Builder{}
-		t := template.Must(template.New(v.name).Parse(v.urlStr))
-		if err := t.ExecuteTemplate(b, v.name, c.vars); err != nil {
-			return err
-		}
-
-		var err error
-		*v.dest, err = url.Parse(b.String())
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // requestsBuff is a pool of buffers used to marshal the request body.
 var requestsBuff = newBufferPool()
 
 // Complete sends a request to the Azure OpenAI service to complete the given prompt.
-func (c *Client) Completions(ctx context.Context, req completions.Req) (completions.Resp, error) {
+func (c *Client) Completions(ctx context.Context, deploymentID string, req completions.Req) (completions.Resp, error) {
+	u, err := c.endpoints.url(completionsTmpl, deploymentID, c.vars)
+	if err != nil {
+		return completions.Resp{}, err
+	}
+
 	b, err := json.Marshal(req)
 	if err != nil {
 		return completions.Resp{}, err
 	}
-	resp, err := c.send(ctx, c.completionsURL, b)
+	resp, err := c.send(ctx, u, b)
 	if err != nil {
 		return completions.Resp{}, err
 	}
@@ -149,8 +182,15 @@ func (c *Client) Completions(ctx context.Context, req completions.Req) (completi
 // CompletionsStream is the same as Completions, except that as the service accumulates tokens to respond
 // to the request, it will stream the results back to the client. The client can stop the stream by cancelling
 // the context.
-func (c *Client) CompletionsStream(ctx context.Context, req completions.Req) chan StreamRecv[completions.Resp] {
+func (c *Client) CompletionsStream(ctx context.Context, deploymentID string, req completions.Req) chan StreamRecv[completions.Resp] {
 	ch := make(chan StreamRecv[completions.Resp], 1)
+
+	u, err := c.endpoints.url(completionsTmpl, deploymentID, c.vars)
+	if err != nil {
+		ch <- StreamRecv[completions.Resp]{Err: err}
+		return ch
+	}
+
 	req.Stream = true
 	b, err := json.Marshal(req)
 	if err != nil {
@@ -161,7 +201,7 @@ func (c *Client) CompletionsStream(ctx context.Context, req completions.Req) cha
 	go func() {
 		defer close(ch)
 
-		responses, err := c.stream(ctx, c.completionsURL, b)
+		responses, err := c.stream(ctx, u, b)
 		if err != nil {
 			ch <- StreamRecv[completions.Resp]{Err: err}
 			return
@@ -181,12 +221,17 @@ func (c *Client) CompletionsStream(ctx context.Context, req completions.Req) cha
 }
 
 // Embeddings sends a request to the Azure OpenAI service to get the embeddings for the given set of data.
-func (c *Client) Embeddings(ctx context.Context, req embeddings.Req) (embeddings.Resp, error) {
+func (c *Client) Embeddings(ctx context.Context, deploymentID string, req embeddings.Req) (embeddings.Resp, error) {
+	u, err := c.endpoints.url(embeddingsTmpl, deploymentID, c.vars)
+	if err != nil {
+		return embeddings.Resp{}, err
+	}
+
 	b, err := json.Marshal(req)
 	if err != nil {
 		return embeddings.Resp{}, err
 	}
-	resp, err := c.send(ctx, c.embeddingsURL, b)
+	resp, err := c.send(ctx, u, b)
 	if err != nil {
 		return embeddings.Resp{}, err
 	}
@@ -204,12 +249,17 @@ func (c *Client) Embeddings(ctx context.Context, req embeddings.Req) (embeddings
 }
 
 // Chat sends a request to the Azure OpenAI service to get responses to chat messages for the given set of data.
-func (c *Client) Chat(ctx context.Context, req chat.Req) (chat.Resp, error) {
+func (c *Client) Chat(ctx context.Context, deploymentID string, req chat.Req) (chat.Resp, error) {
+	u, err := c.endpoints.url(chatTmpl, deploymentID, c.vars)
+	if err != nil {
+		return chat.Resp{}, err
+	}
+
 	b, err := json.Marshal(req)
 	if err != nil {
 		return chat.Resp{}, err
 	}
-	resp, err := c.send(ctx, c.chatURL, b)
+	resp, err := c.send(ctx, u, b)
 	if err != nil {
 		return chat.Resp{}, err
 	}

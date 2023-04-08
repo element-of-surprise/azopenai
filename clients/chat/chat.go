@@ -7,7 +7,7 @@ way to create a Client is by using the azopenai.Client.Chat() method.
 
 Using this API is simple:
 
-	chatClient := client.Chat()
+	chatClient := client.Chat("deploymentID")
 	messages := []chat.SendMsg{
 		{
 			Role:    "system",
@@ -18,8 +18,8 @@ Using this API is simple:
 			Content: "Does Azure OpenAI support customer managed keys?",
 		},
 	}
-	ctx := context.Background()
-	resp, err := chatClient.Call(ctx, messages)
+
+	resp, err := chatClient.Call(context.Background(), messages)
 	if err != nil {
 		return err
 	}
@@ -27,7 +27,7 @@ Using this API is simple:
 
 You can also set the default parameters for the client:
 
-	chatClient := client.Chat()
+	chatClient := client.Chat("deploymentID")
 	// This creates a new instance of CallParams with the default values.
 	// We then modify then and set them on the client. They will be used on
 	// every call unless you override them on a specific call.
@@ -37,8 +37,7 @@ You can also set the default parameters for the client:
 	chatClient.SetParams(params)
 
 	messages := []chat.SendMsg{{Role: "user", Content: "Tell me a joke"}}
-	ctx := context.Background()
-	resp, err := chatClient.Call(ctx, messages)
+	resp, err := chatClient.Call(context.Background(), messages)
 	if err != nil {
 		return err
 	}
@@ -47,8 +46,7 @@ You can also set the default parameters for the client:
 You can also override the parameters on a per-call basis:
 
 	messages := []chat.SendMsg{{Role: "user", Content: "Tell me a joke"}}
-	ctx := context.Background()
-	resp, err := chatClient.Call(ctx, messages, chat.WithCallParams(params))
+	resp, err := chatClient.Call(context.Background(), messages, chat.WithCallParams(params))
 	if err != nil {
 		return err
 	}
@@ -67,16 +65,18 @@ import (
 // Client provides access to the Chat API. Chat allows you to generate text in response
 // to text that is provided.
 type Client struct {
-	rest *rest.Client
+	deploymentID string
+	rest         *rest.Client
 
 	CallParams atomic.Pointer[CallParams]
 }
 
 // New creates a new instance of the Client type from the rest.Client. This is generally
 // not used directly, but is used by the azopenai.Client.
-func New(rest *rest.Client) *Client {
+func New(deploymentID string, rest *rest.Client) *Client {
 	return &Client{
-		rest: rest,
+		deploymentID: deploymentID,
+		rest:         rest,
 	}
 }
 
@@ -180,6 +180,7 @@ type Chats struct {
 type callOptions struct {
 	CallParams    CallParams
 	setCallParams bool
+	DeploymentID  string
 
 	RestReq  bool
 	RestResp bool
@@ -194,6 +195,15 @@ func WithCallParams(params CallParams) CallOption {
 	return func(o *callOptions) error {
 		o.CallParams = params
 		o.setCallParams = true
+		return nil
+	}
+}
+
+// WithDeploymentID sets the deployment ID to use for the call. If not set, the deploymentID
+// set on the client will be used.
+func WithDeploymentID(deploymentID string) CallOption {
+	return func(o *callOptions) error {
+		o.DeploymentID = deploymentID
 		return nil
 	}
 }
@@ -264,7 +274,12 @@ func (c *Client) Call(ctx context.Context, messages []SendMsg, options ...CallOp
 		req.Messages = append(req.Messages, m.toSendMsg())
 	}
 
-	resp, err := c.rest.Chat(ctx, req)
+	deploymentID := c.deploymentID
+	if callOptions.DeploymentID != "" {
+		deploymentID = callOptions.DeploymentID
+	}
+
+	resp, err := c.rest.Chat(ctx, deploymentID, req)
 	if err != nil {
 		return Chats{}, err
 	}

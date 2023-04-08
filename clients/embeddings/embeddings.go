@@ -6,7 +6,7 @@ The simplest way to create a Client is by using the azopenai.Client.Embeddings()
 
 Using this API is simple:
 
-	embeddingsClient := client.Embeddings()
+	embeddingsClient := client.Embeddings("deploymentID")
 	ctx := context.Background()
 	text := []string{"The food was delicious and the waiter..."}
 	resp, err := embeddingsClient.Call(ctx, text)
@@ -17,7 +17,7 @@ Using this API is simple:
 
 You can also set the default parameters for the client:
 
-	embeddingsClient := client.Embeddings()
+	embeddingsClient := client.Embeddings("deploymentID")
 
 	// This creates a new instance of CallParams with the default values.
 	// We then modify then and set them on the client. They will be used on
@@ -26,9 +26,8 @@ You can also set the default parameters for the client:
 	params.User = "element-of-surprise"
 	embeddingsClient.SetParams(params)
 
-	ctx := context.Background()
 	text := []string{"The food was delicious and the waiter..."}
-	resp, err := embeddingsClient.Call(ctx, text)
+	resp, err := embeddingsClient.Call(context.Background(), text)
 	if err != nil {
 		return err
 	}
@@ -36,9 +35,8 @@ You can also set the default parameters for the client:
 
 You can also override the parameters on a per-call basis:
 
-	ctx := context.Background()
 	text := []string{"The food was delicious and the waiter..."}
-	resp, err := embeddingsClient.Call(ctx, text, embeddings.WithCallParams(params))
+	resp, err := embeddingsClient.Call(context.Background(), text, embeddings.WithCallParams(params))
 	if err != nil {
 		return err
 	}
@@ -58,16 +56,18 @@ import (
 // Client provides access to the Embeddings API. Embeddings allows converting text strings
 // to vector representation that can be consumed by machine learning models.
 type Client struct {
-	rest *rest.Client
+	deploymentID string
+	rest         *rest.Client
 
 	CallParams atomic.Pointer[CallParams]
 }
 
 // New creates a new instance of the Client type from the rest.Client. This is generally
 // not used directly, but is used by the azopenai.Client.
-func New(rest *rest.Client) *Client {
+func New(deploymentID string, rest *rest.Client) *Client {
 	return &Client{
-		rest: rest,
+		deploymentID: deploymentID,
+		rest:         rest,
 	}
 }
 
@@ -112,6 +112,7 @@ type Embeddings struct {
 
 type callOptions struct {
 	CallParams    CallParams
+	DeploymentID  string
 	setCallParams bool
 
 	RestReq        bool
@@ -128,6 +129,15 @@ func WithCallParams(params CallParams) CallOption {
 	return func(o *callOptions) error {
 		o.CallParams = params
 		o.setCallParams = true
+		return nil
+	}
+}
+
+// WithDeploymentID sets the deployment ID to use for the call. If not set, the deploymentID
+// set on the client will be used.
+func WithDeploymentID(deploymentID string) CallOption {
+	return func(o *callOptions) error {
+		o.DeploymentID = deploymentID
 		return nil
 	}
 }
@@ -178,7 +188,12 @@ func (c *Client) Call(ctx context.Context, text []string, options ...CallOption)
 	req := callOptions.CallParams.toEmbeddingsRequest()
 	req.Input = text
 
-	resp, err := c.rest.Embeddings(ctx, req)
+	deploymentID := c.deploymentID
+	if callOptions.DeploymentID != "" {
+		deploymentID = callOptions.DeploymentID
+	}
+
+	resp, err := c.rest.Embeddings(ctx, deploymentID, req)
 	if err != nil {
 		return Embeddings{}, err
 	}

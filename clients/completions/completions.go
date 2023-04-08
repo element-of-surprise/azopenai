@@ -54,16 +54,18 @@ import (
 )
 
 type Client struct {
-	rest *rest.Client
+	deploymentID string
+	rest         *rest.Client
 
 	callParams atomic.Pointer[CallParams]
 }
 
 // New creates a new instance of the Client type from the rest.Client. This is generally
 // not used directly, but is used by the azopenai.Client.
-func New(rest *rest.Client) *Client {
+func New(deploymentID string, rest *rest.Client) *Client {
 	return &Client{
-		rest: rest,
+		deploymentID: deploymentID,
+		rest:         rest,
 	}
 }
 
@@ -181,6 +183,7 @@ type Completions struct {
 type callOptions struct {
 	CallParams    CallParams
 	setCallParams bool
+	DeploymentID  string
 
 	RestReq  bool
 	RestResp bool
@@ -195,6 +198,15 @@ func WithCallParams(params CallParams) CallOption {
 	return func(o *callOptions) error {
 		o.CallParams = params
 		o.setCallParams = true
+		return nil
+	}
+}
+
+// WithDeploymentID sets the deployment ID to use for the call. If not set, the deploymentID
+// set on the client will be used.
+func WithDeploymentID(deploymentID string) CallOption {
+	return func(o *callOptions) error {
+		o.DeploymentID = deploymentID
 		return nil
 	}
 }
@@ -216,7 +228,12 @@ func (c *Client) Call(ctx context.Context, prompts []string, options ...CallOpti
 		return Completions{}, err
 	}
 
-	resp, err := c.rest.Completions(ctx, req)
+	deploymentID := c.deploymentID
+	if callOptions.DeploymentID != "" {
+		deploymentID = callOptions.DeploymentID
+	}
+
+	resp, err := c.rest.Completions(ctx, deploymentID, req)
 	if err != nil {
 		return Completions{}, err
 	}
@@ -247,16 +264,22 @@ type StreamData struct {
 // value will be part of a single completion.
 func (c *Client) Stream(ctx context.Context, prompts string, options ...CallOption) chan StreamData {
 	ch := make(chan StreamData, 1)
+
 	req, callOptions, err := c.prep([]string{prompts}, options...)
 	if err != nil {
 		ch <- StreamData{Err: err}
 		return ch
 	}
 
+	deploymentID := c.deploymentID
+	if callOptions.DeploymentID != "" {
+		deploymentID = callOptions.DeploymentID
+	}
+
 	go func() {
 		defer close(ch)
 
-		responses := c.rest.CompletionsStream(ctx, req)
+		responses := c.rest.CompletionsStream(ctx, deploymentID, req)
 		if err != nil {
 			ch <- StreamData{Err: err}
 			return

@@ -24,12 +24,12 @@ func main() {
 }
 
 func Chat(apiKey, resourceName, deploymentID string) error {
-	client, err := azopenai.New(resourceName, deploymentID, auth.Authorizer{ApiKey: apiKey})
+	client, err := azopenai.New(resourceName, auth.Authorizer{ApiKey: apiKey})
 	if err != nil {
 		return err
 	}
 
-	chatClient := client.Chat()
+	chatClient := client.Chat(deploymentID)
 	messages := []chat.SendMsg{
 		{
 			Role:    chat.System,
@@ -50,12 +50,12 @@ func Chat(apiKey, resourceName, deploymentID string) error {
 }
 
 func ChatWithParams(apiKey, resourceName, deploymentID string) error {
-	client, err := azopenai.New(resourceName, deploymentID, auth.Authorizer{ApiKey: apiKey})
+	client, err := azopenai.New(resourceName, auth.Authorizer{ApiKey: apiKey})
 	if err != nil {
 		return err
 	}
 
-	chatClient := client.Chat()
+	chatClient := client.Chat(deploymentID)
 	// This creates a new instance of CallParams with the default values.
 	// We then modify then and set them on the client. They will be used on
 	// every call unless you override them on a specific call.
@@ -75,12 +75,12 @@ func ChatWithParams(apiKey, resourceName, deploymentID string) error {
 }
 
 func ChatWithParamsPerCall(apiKey, resourceName, deploymentID string) error {
-	client, err := azopenai.New(resourceName, deploymentID, auth.Authorizer{ApiKey: apiKey})
+	client, err := azopenai.New(resourceName, auth.Authorizer{ApiKey: apiKey})
 	if err != nil {
 		return err
 	}
 
-	chatClient := client.Chat()
+	chatClient := client.Chat(deploymentID)
 	// This creates a new instance of CallParams with the default values.
 	// We then modify then and set them on the client. They will be used on
 	// every call unless you override them on a specific call.
@@ -99,12 +99,12 @@ func ChatWithParamsPerCall(apiKey, resourceName, deploymentID string) error {
 }
 
 func Completions(apiKey, resourceName, deploymentID string) error {
-	client, err := azopenai.New(resourceName, deploymentID, auth.Authorizer{ApiKey: apiKey})
+	client, err := azopenai.New(resourceName, auth.Authorizer{ApiKey: apiKey})
 	if err != nil {
 		return err
 	}
 
-	completions := client.Completions()
+	completions := client.Completions(deploymentID)
 	resp, err := completions.Call(context.Background(), []string{"The capital of California is"})
 	if err != nil {
 		return err
@@ -115,12 +115,12 @@ func Completions(apiKey, resourceName, deploymentID string) error {
 }
 
 func CompletionsWithParams(apiKey, resourceName, deploymentID string) error {
-	client, err := azopenai.New(resourceName, deploymentID, auth.Authorizer{ApiKey: apiKey})
+	client, err := azopenai.New(resourceName, auth.Authorizer{ApiKey: apiKey})
 	if err != nil {
 		return err
 	}
 
-	completionsClient := client.Completions()
+	completionsClient := client.Completions(deploymentID)
 
 	// This creates a new instance of CallParams with the default values.
 	// We then modify then and set them on the client. They will be used on
@@ -140,12 +140,12 @@ func CompletionsWithParams(apiKey, resourceName, deploymentID string) error {
 }
 
 func CompletionsWithParamsPerCall(apiKey, resourceName, deploymentID string) error {
-	client, err := azopenai.New(resourceName, deploymentID, auth.Authorizer{ApiKey: apiKey})
+	client, err := azopenai.New(resourceName, auth.Authorizer{ApiKey: apiKey})
 	if err != nil {
 		return err
 	}
 
-	completionsClient := client.Completions()
+	completionsClient := client.Completions(deploymentID)
 
 	// This creates a new instance of CallParams with the default values.
 	// We then modify then and set them on the client. They will be used on
@@ -164,12 +164,12 @@ func CompletionsWithParamsPerCall(apiKey, resourceName, deploymentID string) err
 }
 
 func Embeddings(apiKey, resourceName, deploymentID string) error {
-	client, err := azopenai.New(resourceName, deploymentID, auth.Authorizer{ApiKey: apiKey})
+	client, err := azopenai.New(resourceName, auth.Authorizer{ApiKey: apiKey})
 	if err != nil {
 		return err
 	}
 
-	embeddingsClient := client.Embeddings()
+	embeddingsClient := client.Embeddings(deploymentID)
 	text := []string{"The food was delicious and the waiter..."}
 	resp, err := embeddingsClient.Call(context.Background(), text)
 	if err != nil {
@@ -180,12 +180,12 @@ func Embeddings(apiKey, resourceName, deploymentID string) error {
 }
 
 func EmbeddingsWithParams(apiKey, resourceName, deploymentID string) error {
-	client, err := azopenai.New(resourceName, deploymentID, auth.Authorizer{ApiKey: apiKey})
+	client, err := azopenai.New(resourceName, auth.Authorizer{ApiKey: apiKey})
 	if err != nil {
 		return err
 	}
 
-	embeddingsClient := client.Embeddings()
+	embeddingsClient := client.Embeddings(deploymentID)
 
 	// This creates a new instance of CallParams with the default values.
 	// We then modify then and set them on the client. They will be used on
@@ -204,12 +204,12 @@ func EmbeddingsWithParams(apiKey, resourceName, deploymentID string) error {
 }
 
 func EmbeddingsWithParamsPerCall(apiKey, resourceName, deploymentID string) error {
-	client, err := azopenai.New(resourceName, deploymentID, auth.Authorizer{ApiKey: apiKey})
+	client, err := azopenai.New(resourceName, auth.Authorizer{ApiKey: apiKey})
 	if err != nil {
 		return err
 	}
 
-	embeddingsClient := client.Embeddings()
+	embeddingsClient := client.Embeddings(deploymentID)
 
 	// This creates a new instance of CallParams with the default values.
 	// We then modify then and set them on the client. They will be used on

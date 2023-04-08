@@ -1,21 +1,22 @@
 /*
 Package completions provides a client for the Completions API.
 
-This allows you to generate text responses to textual prompts a user provides. The simpliest
+This allows you to generate text responses to textual prompts a user provides. The simplest
 way to create a Client is by using the azopenai.Client.Completions() method.
 
 Using this API is simple:
 
-	client := azopenai.Client.Completions()
-	resp, err := client.Call([]string{"The capital of Tennessee is"})
+	ctx := context.Background()
+	completions := client.Completions()
+	resp, err := completions.Call(ctx, []string{"The capital of California is"})
 	if err != nil {
-		// handle error
+		return err
 	}
-	fmt.Println(resp.Completions[0].Text)
+	fmt.Println(resp.Text[0])
 
 You can also set the default parameters for the client:
 
-	client := azopenai.Client.Completions()
+	completionsClient := client.Completions()
 
 	// This creates a new instance of CallParams with the default values.
 	// We then modify then and set them on the client. They will be used on
@@ -23,21 +24,23 @@ You can also set the default parameters for the client:
 	params := completions.CallParams{}.Defaults()
 	params.MaxTokens = 32
 	params.Temperature = 0.5
-	client.SetParams(params)
+	completionsClient.SetParams(params)
 
-	resp, err := client.Call([]string{"The first 10 books in the Harry Potter series are"})
+	ctx := context.Background()
+	resp, err := completionsClient.Call(ctx, []string{"The capital of California is"})
 	if err != nil {
-		// handle error
+		return err
 	}
-
-	fmt.Println(resp.Completions[0].Text)
+	fmt.Println(resp.Text[0])
 
 You can also override the parameters on a per-call basis:
 
-	resp, err := client.Call([]string{"Kyoto is a city in the  "}, completions.WithCallParams(customParams))
+	ctx := context.Background()
+	resp, err := completionsClient.Call(ctx, []string{"The capital of California is"}, completions.WithCallParams(params))
 	if err != nil {
-		// handle error
+		return err
 	}
+	fmt.Println(resp.Text[0])
 */
 package completions
 

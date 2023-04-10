@@ -51,8 +51,16 @@ import (
 
 func main() {
 	ctx := context.Background()
+	// apiKey is the a generated key located in the Azure Portal under "keys and endpoint".
+	// It is also possible to use azidentity instead of an API key.
 	apiKey := os.Getenv("API_KEY")
+	// resourceName is the name of your OpenAI cluster. This is unique in Azure.
+	// You can find this both in the upper left corner of the Portal or under the overview
+	// tab there will be an "Endpoint" label with something like "https://openai230322.openai.azure.com/" displayed. "openai230300" would be the resource name in this case.
 	resourceName := os.Getenv("RESOURCE_ID")
+	// deploymentID is the name of a model you deployed. This is YOUR NAME for the model, not the
+	// actual model name (as you could deploy 2 text-davinci-003 models with different names). This
+	// can be found under the "Model deployments" tab under the column "Model deployments name".
 	deploymentID := os.Getenv("DEPLOYMENT_ID")
 
 	client, err := azopenai.New(resourceName, auth.Authorizer{ApiKey: apiKey})

@@ -9,6 +9,19 @@ Each of these sub-clients provides access to the corresponding API endpoints. Yo
 can access each of these sub-clients by calling the corresponding method on the main client.
 They will all share the same authentication and http.Client.
 
+Required Information to use this SDK:
+
+	Resource Name:
+		The name of your OpenAI cluster. This is unique in Azure.
+		You can find this both in the upper left corner of the Portal or under the overview
+		tab there will be an "Endpoint" label with something like "https://openai230322.openai.azure.com/" displayed.
+		"openai230300" would be the resource name in this case.
+
+	Deployment ID:
+		The name of the model you deployed. This is YOUR NAME for the model, not the
+		actual model name (as you could deploy 2 text-davinci-003 models with different names).
+		This can be found under the "Model deployments" tab under the column "Model deployments name".
+
 Creating a Client with an API Key:
 
 	client, err := azopenai.New(resourceName, auth.Authorizer{ApiKey: apiKey})
@@ -41,9 +54,8 @@ It should be noted that the New() method will not return an error if your creden
 are invalid. Only after calling a method on the sub-clients will you get an error if your
 credentials or resource/deployment names are invalid.
 
-If your program needs to terminate or deal with a chat client issue early in its runtime,
-it is suggested to make a call to one of the APIs to ensure that your credentials are valid after
-creating the client.
+IT IS HIGHLY RECOMMENDED TO USE A SUB-CLIENT
+IMMEDIATELY AFTER CREATION TO VALIDATE YOUR CREDENTIALS AND CONNECTIVITY.
 
 [AzIdentity]: https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/azidentity/README.md
 [Managed Identity for Azure Resources]: https://learn.microsoft.com/azure/active-directory/managed-identities-azure-resources/overview

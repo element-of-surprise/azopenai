@@ -70,7 +70,7 @@ func main() {
 }
 ```
 
-In this example, `azopenai.New()` is used to create a new AzOpenAI client with your Azure OpenAI Service [API Key](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/reference#authentication). 
+In this example, `azopenai.New()` is used to create a new AzOpenAI client with your Azure OpenAI Service [API Key](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/reference#authentication). This SDK also supports [azidentity](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity) for authentication.
 
 Then the returned client aggregator `client` has `client.Completions()` called to get a client for the completions endpoint. You pass the `deploymentID` here so that you can point at the right model for the sub-client. Deployments only have support for some API calls.
 

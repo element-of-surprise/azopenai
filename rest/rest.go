@@ -18,6 +18,7 @@ import (
 	"text/template"
 
 	"github.com/element-of-surprise/azopenai/auth"
+	"github.com/element-of-surprise/azopenai/errors"
 	"github.com/element-of-surprise/azopenai/rest/messages/chat"
 	"github.com/element-of-surprise/azopenai/rest/messages/completions"
 	"github.com/element-of-surprise/azopenai/rest/messages/embeddings"
@@ -301,11 +302,7 @@ func (c *Client) send(ctx context.Context, addr *url.URL, msg []byte) ([]byte, e
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("status code %d and error reading result body", resp.StatusCode)
-		}
-		return nil, fmt.Errorf("status code %d and result body %q", resp.StatusCode, string(b))
+		return nil, specErr(resp)
 	}
 
 	b, err := io.ReadAll(resp.Body)
@@ -349,7 +346,7 @@ func (c *Client) stream(ctx context.Context, addr *url.URL, msg []byte) (chan St
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status code %d", resp.StatusCode)
+		return nil, specErr(resp)
 	}
 
 	ch := make(chan StreamRecv[[]byte], 1)
@@ -385,6 +382,29 @@ func (c *Client) stream(ctx context.Context, addr *url.URL, msg []byte) (chan St
 	}()
 
 	return ch, nil
+}
+
+func specErr(resp *http.Response) error {
+	msg, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return errors.StatusCode{
+			Message:    string(msg),
+			StatusCode: resp.StatusCode,
+		}
+	}
+
+	m := map[string]any{}
+	if err := json.Unmarshal(msg, &m); err != nil {
+		return errors.StatusCode{
+			Message:    string(msg),
+			StatusCode: resp.StatusCode,
+		}
+	}
+	return errors.JSON{
+		Message:    string(msg),
+		JSON:       m,
+		StatusCode: resp.StatusCode,
+	}
 }
 
 // StreamRecv is used to receive data from a stream.
